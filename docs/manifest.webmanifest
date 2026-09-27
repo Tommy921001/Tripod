@@ -1,0 +1,32 @@
+{
+ "name": "트라이팟 신호판",
+ "short_name": "트라이팟",
+ "description": "송팀장 트라이팟 규칙 — 250일선·VIX10·52주 낙폭 신호판",
+ "start_url": "./",
+ "scope": "./",
+ "display": "standalone",
+ "orientation": "portrait",
+ "background_color": "#f2f5f4",
+ "theme_color": "#0d6a60",
+ "lang": "ko",
+ "icons": [
+  {
+   "src": "icon-192.png",
+   "sizes": "192x192",
+   "type": "image/png",
+   "purpose": "any"
+  },
+  {
+   "src": "icon-512.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "any"
+  },
+  {
+   "src": "icon-512-maskable.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "maskable"
+  }
+ ]
+}

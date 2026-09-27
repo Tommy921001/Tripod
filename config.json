@@ -1,0 +1,105 @@
+{
+  "_comment": "송팀장 트라이팟 규칙 파라미터. 기본값 = 영상 원본값(2026-08-31 촬영분). preset을 바꾸면 매운맛/순한맛 튜닝 가능.",
+  "active_preset": "original",
+  "presets": {
+    "original": {
+      "label": "원본 (영상 공개값)",
+      "sma_window": 250,
+      "band_up": 0.01,
+      "band_down": -0.05,
+      "vix_window": 10,
+      "vix_up_threshold": 28.0,
+      "vix_down_threshold": 18.0,
+      "dd_window": 252,
+      "dd_threshold": -0.09,
+      "alloc": {
+        "UP_RISKON": {
+          "TQQQ": 1.0
+        },
+        "UP_RISKOFF": {
+          "QQQ": 0.5,
+          "QLD": 0.5
+        },
+        "DOWN_CALM": {
+          "QQQ": 0.5,
+          "QLD": 0.5
+        },
+        "DOWN_FEAR": {
+          "CASH": 1.0
+        }
+      }
+    },
+    "mild": {
+      "label": "순한맛 (레버리지 한 단계 축소)",
+      "sma_window": 250,
+      "band_up": 0.01,
+      "band_down": -0.05,
+      "vix_window": 10,
+      "vix_up_threshold": 24.0,
+      "vix_down_threshold": 18.0,
+      "dd_window": 252,
+      "dd_threshold": -0.07,
+      "alloc": {
+        "UP_RISKON": {
+          "QLD": 1.0
+        },
+        "UP_RISKOFF": {
+          "QQQ": 0.5,
+          "QLD": 0.5
+        },
+        "DOWN_CALM": {
+          "QQQ": 1.0
+        },
+        "DOWN_FEAR": {
+          "CASH": 1.0
+        }
+      }
+    },
+    "spicy": {
+      "label": "매운맛 (VIX 문턱 상향)",
+      "sma_window": 250,
+      "band_up": 0.01,
+      "band_down": -0.05,
+      "vix_window": 10,
+      "vix_up_threshold": 34.0,
+      "vix_down_threshold": 20.0,
+      "dd_window": 252,
+      "dd_threshold": -0.12,
+      "alloc": {
+        "UP_RISKON": {
+          "TQQQ": 1.0
+        },
+        "UP_RISKOFF": {
+          "QQQ": 0.5,
+          "QLD": 0.5
+        },
+        "DOWN_CALM": {
+          "QQQ": 0.5,
+          "QLD": 0.5
+        },
+        "DOWN_FEAR": {
+          "CASH": 1.0
+        }
+      }
+    }
+  },
+  "execution": {
+    "_comment": "신호는 T일 종가로 확정, 체결은 T+1 거래일. lag_days=2 이면 T+2일 수익률부터 새 배분이 적용됨(종가체결 가정).",
+    "lag_days": 2,
+    "trade_cost_bps": 3.0
+  },
+  "synthetic_costs": {
+    "_comment": "지수로 합성한 가상 ETF 비용. 연율(%). NDX는 가격지수라 배당이 빠져 있어 index_dividend_yield로 되돌려 준다. 조달금리 = 13주 T-bill(^IRX) + spread.",
+    "expense_qqq": 0.2,
+    "expense_qld": 0.95,
+    "expense_tqqq": 0.95,
+    "financing_spread": 0.5,
+    "cash_yield_haircut": 0.3,
+    "trading_days": 252,
+    "index_dividend_yield": 0.45
+  },
+  "backtest": {
+    "start": "19910101",
+    "end": "20260904"
+  }
+}

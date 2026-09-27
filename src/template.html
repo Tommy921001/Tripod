@@ -1,0 +1,404 @@
+<title>트라이팟 신호판</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@300;400;500;600;700&display=swap">
+<style>
+:root{
+  --ink:#111b1e; --ink-2:#33474d; --ink-3:#67797f;
+  --ground:#f2f5f4; --panel:#ffffff; --panel-2:#e9eeed;
+  --line:#d2dbd9; --line-strong:#b3c1be;
+  --accent:#0d6a60; --accent-soft:#d9ebe7;
+  --ok:#1c6f4a; --ok-soft:#dcece2;
+  --warn:#9a6414; --warn-soft:#f3e7d2;
+  --crit:#9c2f2f; --crit-soft:#f2dcdc;
+  --shadow:0 1px 2px rgba(17,27,30,.06), 0 8px 24px -18px rgba(17,27,30,.5);
+  --mono:"IBM Plex Mono","SFMono-Regular",Menlo,monospace;
+  --sans:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ink:#e6efee; --ink-2:#a9bdbb; --ink-3:#7b8e8d;
+    --ground:#0d1416; --panel:#141d20; --panel-2:#1b2629;
+    --line:#263437; --line-strong:#3a4b4f;
+    --accent:#5fc9b8; --accent-soft:#12312e;
+    --ok:#57bd8c; --ok-soft:#122b21;
+    --warn:#d8a556; --warn-soft:#302617;
+    --crit:#e08585; --crit-soft:#331c1c;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 12px 30px -20px rgba(0,0,0,.9);
+  }
+}
+:root[data-theme="dark"]{
+  --ink:#e6efee; --ink-2:#a9bdbb; --ink-3:#7b8e8d;
+  --ground:#0d1416; --panel:#141d20; --panel-2:#1b2629;
+  --line:#263437; --line-strong:#3a4b4f;
+  --accent:#5fc9b8; --accent-soft:#12312e;
+  --ok:#57bd8c; --ok-soft:#122b21;
+  --warn:#d8a556; --warn-soft:#302617;
+  --crit:#e08585; --crit-soft:#331c1c;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 12px 30px -20px rgba(0,0,0,.9);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+     font-weight:400;line-height:1.55;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1080px;margin:0 auto;padding:28px 20px 72px;display:flex;flex-direction:column;gap:26px}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+         color:var(--ink-3);font-weight:500}
+h1{font-size:23px;font-weight:700;margin:2px 0 0;letter-spacing:-.01em;text-wrap:balance}
+h2{font-size:15px;font-weight:600;margin:0;letter-spacing:-.005em}
+.sub{color:var(--ink-2);font-size:13px;margin:0}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+header{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;flex-wrap:wrap;
+       border-bottom:1px solid var(--line);padding-bottom:16px}
+.stamp{font-family:var(--mono);font-size:12px;color:var(--ink-3);text-align:right;line-height:1.7}
+.stamp b{color:var(--ink-2);font-weight:500}
+
+/* ── 상태 배너 ───────────────────────────── */
+.verdict{background:var(--panel);border:1px solid var(--line);border-radius:3px;box-shadow:var(--shadow);
+         display:grid;grid-template-columns:minmax(0,1fr) auto;gap:20px;padding:22px 24px;align-items:center;
+         border-left:4px solid var(--st)}
+.verdict .state{font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--st);font-weight:600}
+.verdict .alloc{font-size:31px;font-weight:700;letter-spacing:-.02em;margin:4px 0 6px;line-height:1.15}
+.verdict .note{font-size:13px;color:var(--ink-2)}
+.gearbox{text-align:center;padding-left:20px;border-left:1px solid var(--line)}
+.gearbox .g{font-family:var(--mono);font-size:40px;font-weight:600;color:var(--st);line-height:1}
+.gearbox .l{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin-top:6px}
+.changed{display:inline-block;font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.08em;
+         padding:3px 8px;border-radius:2px;background:var(--crit);color:#fff;margin-bottom:8px}
+.steady{display:inline-block;font-family:var(--mono);font-size:11px;letter-spacing:.08em;
+        padding:3px 8px;border-radius:2px;background:var(--panel-2);color:var(--ink-2);margin-bottom:8px}
+
+/* ── 트라이팟 3개 다리 ───────────────────── */
+.legs{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+@media (max-width:760px){.legs{grid-template-columns:1fr}}
+.leg{background:var(--panel);border:1px solid var(--line);border-radius:3px;padding:18px 18px 16px;
+     display:flex;flex-direction:column;gap:12px}
+.leg .role{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3)}
+.leg .name{font-size:13px;font-weight:600;margin-top:-6px}
+.leg .val{font-family:var(--mono);font-size:29px;font-weight:600;letter-spacing:-.02em;line-height:1}
+.leg .val small{font-size:14px;font-weight:400;color:var(--ink-3);margin-left:2px}
+.leg .gap{font-size:12px;color:var(--ink-2);min-height:34px}
+.leg .gap b{font-weight:600;color:var(--ink)}
+.scale{position:relative;height:34px;margin-top:2px}
+.scale .track{position:absolute;top:11px;left:0;right:0;height:6px;border-radius:1px;overflow:hidden;display:flex}
+.scale .zone{height:100%}
+.scale .needle{position:absolute;top:4px;width:2px;height:20px;background:var(--ink);border-radius:1px}
+.scale .needle::after{content:"";position:absolute;top:-5px;left:-3px;width:8px;height:8px;
+        background:var(--ink);clip-path:polygon(50% 100%,0 0,100% 0)}
+.scale .tick{position:absolute;top:22px;font-family:var(--mono);font-size:9.5px;color:var(--ink-3);
+        transform:translateX(-50%);white-space:nowrap}
+.scale .thr{position:absolute;top:9px;width:1px;height:10px;background:var(--ink-3)}
+
+/* ── 규칙 판정표 ─────────────────────────── */
+.card{background:var(--panel);border:1px solid var(--line);border-radius:3px;overflow:hidden}
+.card > .hd{padding:15px 18px;border-bottom:1px solid var(--line);display:flex;
+            justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);
+   font-weight:500;text-align:left;padding:9px 18px;border-bottom:1px solid var(--line)}
+td{padding:11px 18px;border-bottom:1px solid var(--line)}
+tbody tr:last-child td{border-bottom:none}
+tr.on{background:var(--accent-soft)}
+tr.on td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
+td.n{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.scroll{overflow-x:auto}
+.pill{display:inline-block;font-family:var(--mono);font-size:10.5px;font-weight:500;letter-spacing:.06em;
+      padding:2px 7px;border-radius:2px;white-space:nowrap}
+.p-on{background:var(--ok-soft);color:var(--ok)}
+.p-off{background:var(--warn-soft);color:var(--warn)}
+.p-cash{background:var(--crit-soft);color:var(--crit)}
+
+/* ── 차트 ───────────────────────────────── */
+.chartwrap{padding:6px 6px 0}
+svg{display:block;width:100%;height:auto}
+.legend{display:flex;gap:16px;flex-wrap:wrap;padding:10px 18px 16px;font-size:11.5px;color:var(--ink-2);
+        font-family:var(--mono)}
+.legend i{display:inline-block;width:14px;height:2px;vertical-align:middle;margin-right:5px}
+.legend span.sw{display:inline-block;width:11px;height:11px;vertical-align:-1px;margin-right:5px;border-radius:1px}
+
+/* ── 검증 ───────────────────────────────── */
+.match{font-family:var(--mono);font-size:11px;color:var(--ok)}
+footer{border-top:1px solid var(--line);padding-top:18px;font-size:12px;color:var(--ink-3);line-height:1.75}
+footer b{color:var(--ink-2);font-weight:500}
+.caution{background:var(--panel-2);border-left:3px solid var(--warn);padding:13px 16px;border-radius:2px;
+         font-size:12.5px;color:var(--ink-2);line-height:1.7}
+.stale{background:var(--crit-soft);border:1px solid var(--crit);border-radius:3px;padding:13px 16px;
+       font-size:13px;color:var(--crit);font-weight:600;line-height:1.6}
+.stale b{font-family:var(--mono)}
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <div class="eyebrow">Tripod Rule · 250MA / VIX10 / 52W Drawdown</div>
+      <h1>트라이팟 신호판</h1>
+      <p class="sub">송팀장 규칙 &mdash; 매 거래일 종가로 세 숫자를 보고, 어제와 같으면 아무것도 하지 않는다.</p>
+    </div>
+    <div class="stamp">
+      기준일 <b id="s-asof"></b><br>
+      프리셋 <b id="s-preset"></b><br>
+      갱신 <b id="s-gen"></b>
+    </div>
+  </header>
+
+  <div id="stale" hidden></div>
+
+  <section class="verdict" id="verdict">
+    <div>
+      <div id="v-badge"></div>
+      <div class="state" id="v-state"></div>
+      <div class="alloc" id="v-alloc"></div>
+      <div class="note" id="v-note"></div>
+    </div>
+    <div class="gearbox">
+      <div class="g" id="v-gear"></div>
+      <div class="l">계좌 배수</div>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow" style="margin-bottom:9px">삼각대의 세 다리 &mdash; 하나라도 빠지면 넘어진다</div>
+    <div class="legs" id="legs"></div>
+  </section>
+
+  <section class="card">
+    <div class="hd">
+      <h2>2단계 · 무엇을 살 것인가</h2>
+      <span class="eyebrow" id="rule-params"></span>
+    </div>
+    <div class="scroll"><table id="ruletable">
+      <thead><tr><th>시장</th><th>조건</th><th>배분</th><th style="text-align:right">배수</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+  </section>
+
+  <section class="card">
+    <div class="hd">
+      <h2>최근 1년 &mdash; 지수와 250일선, 그리고 두 문턱</h2>
+      <span class="eyebrow">회색 음영 = 레버리지 축소 구간</span>
+    </div>
+    <div class="chartwrap"><svg id="chart" viewBox="0 0 1000 460" role="img"
+      aria-label="나스닥100 지수와 250일 이동평균, VIX 10일 평균, 52주 낙폭 추이"></svg></div>
+    <div class="legend">
+      <span><i style="background:var(--ink)"></i>NDX</span>
+      <span><i style="background:var(--accent)"></i>250일선</span>
+      <span><i style="background:var(--warn)"></i>VIX 10일 평균</span>
+      <span><i style="background:var(--crit)"></i>52주 고점 대비 낙폭</span>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="hd">
+      <h2>신호 변경 이력</h2>
+      <span class="eyebrow" id="hist-count"></span>
+    </div>
+    <div class="scroll"><table id="histtable">
+      <thead><tr><th>신호일</th><th>체결일</th><th>이전</th><th>이후</th><th style="text-align:right">배수</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+  </section>
+
+  <section class="card">
+    <div class="hd">
+      <h2>35년 백테스트 재현 검증</h2>
+      <span class="eyebrow">1991-01 ~ 2026-09 · 비용·조달금리 반영</span>
+    </div>
+    <div class="scroll"><table id="vtable">
+      <thead><tr><th>항목</th><th style="text-align:right">영상 공개값</th><th style="text-align:right">본 시스템 재현</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+  </section>
+
+  <div class="caution" id="caution"></div>
+
+  <footer>
+    <b>데이터</b> 나스닥100 지수·VIX 일간 종가 (VIX 원본: CBOE / GitHub datasets·finance-vix).
+    지수 종가는 매 거래일 미국장 마감 후 자동 갱신됩니다.<br>
+    <b>체결 가정</b> 신호는 T일 종가로 확정하고 체결은 T+1 거래일 &mdash; 종가를 보고 그 종가에 사는 계산은 하지 않습니다.<br>
+    <b>주의</b> 이 페이지는 규칙의 상태를 추적·표시할 뿐 투자 권유가 아닙니다. 레버리지 ETF는 원금 전액 손실이 가능합니다.
+  </footer>
+</div>
+
+<script>
+const DATA = /*__DATA__*/{};
+
+const $ = (s) => document.querySelector(s);
+const fmt = (n, d=2) => n.toLocaleString('ko-KR',{minimumFractionDigits:d,maximumFractionDigits:d});
+const sgn = (n, d=2) => (n>=0?'+':'') + fmt(n,d);
+const dstr = (s) => `${s.slice(0,4)}.${s.slice(4,6)}.${s.slice(6,8)}`;
+
+const STATE_TONE = {UP_RISKON:'var(--ok)', UP_RISKOFF:'var(--warn)', DOWN_CALM:'var(--warn)', DOWN_FEAR:'var(--crit)'};
+const STATE_KO = {UP_RISKON:'상승 · 위험선호', UP_RISKOFF:'상승 · 위험회피', DOWN_CALM:'하락 · 안정', DOWN_FEAR:'하락 · 공포'};
+const PILL = {UP_RISKON:'p-on', UP_RISKOFF:'p-off', DOWN_CALM:'p-off', DOWN_FEAR:'p-cash'};
+
+/* ── 헤더 & 배너 ── */
+$('#s-asof').textContent = dstr(DATA.asof);
+$('#s-preset').textContent = DATA.preset.label;
+$('#s-gen').textContent = new Date(DATA.generated_at).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',dateStyle:'short',timeStyle:'short'});
+
+/* 자동화가 멎었는지 — 조용한 고장을 눈에 보이게 만든다.
+   장 휴장은 며칠씩 이어질 수 있으므로 '시세 날짜'가 아니라 '마지막 실행 시각'으로 판정한다. */
+(function(){
+  const buildAge = (Date.now() - new Date(DATA.generated_at).getTime())/86400000;
+  const el = $('#stale');
+  if (buildAge > 3) {
+    el.className='stale';
+    el.innerHTML = `⚠ 자동 갱신이 <b>${Math.floor(buildAge)}일째</b> 돌지 않았습니다 `
+      + `(마지막 실행 ${new Date(DATA.generated_at).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',dateStyle:'short',timeStyle:'short'})}). `
+      + `GitHub Actions 탭에서 워크플로가 중지되지 않았는지 확인하세요. `
+      + `아래 판정은 시세 기준일 ${dstr(DATA.asof)} 시점이며 지금 시장을 반영하지 않습니다.`;
+    el.hidden=false;
+  }
+})();
+
+const tone = STATE_TONE[DATA.state];
+$('#verdict').style.setProperty('--st', tone);
+$('#v-state').textContent = DATA.state_label;
+$('#v-alloc').textContent = DATA.alloc_text;
+$('#v-gear').textContent = DATA.gear.toFixed(1) + '×';
+$('#v-badge').innerHTML = DATA.changed_today
+  ? `<span class="changed">★ 오늘 신호 변경</span>`
+  : `<span class="steady">변경 없음 · ${DATA.days_since_change}일째 유지</span>`;
+$('#v-note').innerHTML = DATA.changed_today
+  ? `직전 배분 <b>${DATA.prev_alloc_text}</b> 에서 바뀌었습니다. 규칙상 체결은 <b>다음 거래일</b>입니다.`
+  : `마지막 변경은 ${dstr(DATA.last_change.signal_date)} (${DATA.last_change.to_alloc}). 어제와 같으면 아무것도 하지 않습니다.`;
+
+/* ── 세 다리 게이지 ── */
+const P = DATA.params;
+const legs = [
+  { role:'Leg 1 · 방향', name:`나스닥100 250일선 이격`,
+    val:sgn(DATA.gap_pct)+'%', unit:'',
+    dom:[-15,20], thr:[[P.band_down*100,'하락 -5%'],[P.band_up*100,'상승 +1%']], cur:DATA.gap_pct,
+    zones:[[-15,P.band_down*100,'var(--crit-soft)'],[P.band_down*100,P.band_up*100,'var(--panel-2)'],[P.band_up*100,20,'var(--ok-soft)']],
+    note:DATA.gap_pct > P.band_up*100
+      ? `상승 판정 유지. 하락 전환까지 <b>${fmt(DATA.distance.to_down_band_pct)}%</b> 더 하락해야 합니다.`
+      : (DATA.gap_pct < P.band_down*100
+        ? `하락 판정. 상승 복귀까지 <b>${fmt(Math.abs(DATA.distance.to_up_band_pct))}%</b> 상승 필요.`
+        : `완충 구간 &mdash; 직전 상태를 그대로 유지합니다.`) },
+  { role:'Leg 2 · 공포', name:'VIX 10일 평균',
+    val:fmt(DATA.vix_ma), unit:'',
+    dom:[8,40], thr:[[P.vix_down_threshold,'하락장 18'],[P.vix_up_threshold,'상승장 28']], cur:DATA.vix_ma,
+    zones:[[8,P.vix_down_threshold,'var(--ok-soft)'],[P.vix_down_threshold,P.vix_up_threshold,'var(--panel-2)'],[P.vix_up_threshold,40,'var(--crit-soft)']],
+    note:`상승장 문턱 ${P.vix_up_threshold}까지 <b>${fmt(DATA.distance.vix_to_up_thr)}p</b> 남음. 당일 VIX는 ${fmt(DATA.vix_last)}.` },
+  { role:'Leg 3 · 피로도', name:'52주 고점 대비 낙폭',
+    val:sgn(DATA.dd_pct)+'%', unit:'',
+    dom:[-25,0], thr:[[P.dd_threshold*100,'문턱 -9%']], cur:DATA.dd_pct,
+    zones:[[-25,P.dd_threshold*100,'var(--crit-soft)'],[P.dd_threshold*100,0,'var(--ok-soft)']],
+    note:DATA.dd_pct >= P.dd_threshold*100
+      ? `문턱까지 <b>${fmt(DATA.distance.dd_headroom_pp)}%p</b> 여유. 지수 기준 <b>${fmt(Math.abs(DATA.distance.px_to_dd_thr_pct))}%</b> 더 빠지면 기어 다운.`
+      : `문턱을 넘었습니다. 52주 고점 ${fmt(DATA.high52,0)} 대비.` },
+];
+$('#legs').innerHTML = legs.map(L => {
+  const pos = v => Math.max(0,Math.min(100,(v-L.dom[0])/(L.dom[1]-L.dom[0])*100));
+  const zones = L.zones.map(z=>`<div class="zone" style="width:${pos(z[1])-pos(z[0])}%;background:${z[2]}"></div>`).join('');
+  const thrs = L.thr.map(t=>`<div class="thr" style="left:${pos(t[0])}%"></div><div class="tick" style="left:${pos(t[0])}%">${t[1]}</div>`).join('');
+  return `<div class="leg">
+    <div><div class="role">${L.role}</div><div class="name">${L.name}</div></div>
+    <div class="val">${L.val}<small>${L.unit}</small></div>
+    <div class="scale"><div class="track">${zones}</div>${thrs}
+      <div class="needle" style="left:calc(${pos(L.cur)}% - 1px)"></div></div>
+    <div class="gap">${L.note}</div>
+  </div>`;
+}).join('');
+
+/* ── 규칙표 ── */
+$('#rule-params').textContent = `250일선 +${P.band_up*100}% / ${P.band_down*100}% · VIX10 ${P.vix_up_threshold}/${P.vix_down_threshold} · 낙폭 ${P.dd_threshold*100}%`;
+const RULES = [
+  ['UP_RISKON','상승',`VIX10 &lt; ${P.vix_up_threshold} <b>그리고</b> 낙폭 ${Math.abs(P.dd_threshold*100)}% 이내`,'TQQQ 100%','3.0×'],
+  ['UP_RISKOFF','상승',`VIX10 ≥ ${P.vix_up_threshold} <b>또는</b> 낙폭 ${Math.abs(P.dd_threshold*100)}% 초과`,'QQQ 50% + QLD 50%','1.5×'],
+  ['DOWN_CALM','하락',`VIX10 &lt; ${P.vix_down_threshold}`,'QQQ 50% + QLD 50%','1.5×'],
+  ['DOWN_FEAR','하락',`VIX10 ≥ ${P.vix_down_threshold}`,'현금 100%','0×'],
+];
+$('#ruletable tbody').innerHTML = RULES.map(r=>`<tr class="${r[0]===DATA.state?'on':''}">
+  <td><span class="pill ${PILL[r[0]]}">${r[1]}</span></td><td>${r[2]}</td>
+  <td style="font-weight:600">${r[3]}</td><td class="n" style="text-align:right">${r[4]}</td></tr>`).join('');
+
+/* ── 이력표 ── */
+const hist = DATA.changes.slice(-12).reverse();
+$('#hist-count').textContent = `최근 12건 · 35년 백테스트 기준 연평균 7.9회`;
+$('#histtable tbody').innerHTML = hist.map(c=>`<tr>
+  <td class="n">${dstr(c.signal_date)}</td><td class="n" style="color:var(--ink-3)">${dstr(c.fill_date)}</td>
+  <td><span class="pill ${PILL[c.from]}">${STATE_KO[c.from]}</span><br><span style="font-size:11.5px;color:var(--ink-3)">${c.from_alloc}</span></td>
+  <td><span class="pill ${PILL[c.to]}">${STATE_KO[c.to]}</span><br><span style="font-size:11.5px;color:var(--ink-3)">${c.to_alloc}</span></td>
+  <td class="n" style="text-align:right;color:${c.to_gear<c.from_gear?'var(--crit)':'var(--ok)'}">${c.from_gear.toFixed(1)}→${c.to_gear.toFixed(1)}×</td></tr>`).join('');
+
+/* ── 검증표 ── */
+const VER = DATA.validation || [];
+$('#vtable tbody').innerHTML = VER.map(v=>`<tr>
+  <td>${v[0]}</td><td class="n" style="text-align:right;color:var(--ink-2)">${v[1]}</td>
+  <td class="n" style="text-align:right;font-weight:600">${v[2]}</td>
+  <td style="width:1%"><span class="match">${v[3]||'일치'}</span></td></tr>`).join('');
+
+$('#caution').innerHTML = DATA.caution || '';
+
+/* ── 차트 ── */
+(function(){
+  const C = DATA.chart, svg = $('#chart');
+  const W=1000, H=460, L=54, R=48, T=14;
+  const pw=W-L-R, phTop=222, phBot=72, phDD=64, gapY=32;
+  const xs = i => L + pw*i/(C.length-1);
+  const px = v => v.toFixed(1);
+
+  const allP = C.flatMap(d=>[d.ndx,d.sma]);
+  let lo=Math.min(...allP), hi=Math.max(...allP); const pad=(hi-lo)*0.10; lo-=pad; hi+=pad;
+  const yP = v => T + phTop - (v-lo)/(hi-lo)*phTop;
+
+  const vLo=Math.min(10,Math.min(...C.map(d=>d.vix))-1), vHi=Math.max(30,Math.max(...C.map(d=>d.vix))+1);
+  const yV = v => T+phTop+gapY + phBot - (v-vLo)/(vHi-vLo)*phBot;
+
+  const path = (acc,y) => C.map((d,i)=>`${i?'L':'M'}${px(xs(i))} ${px(y(acc(d)))}`).join(' ');
+
+  let out='';
+  // 레버리지 축소 구간 음영
+  let run=null;
+  C.forEach((d,i)=>{
+    const off = d.st!=='UP_RISKON';
+    if(off && run===null) run=i;
+    if((!off||i===C.length-1) && run!==null){
+      const a=xs(run), b=xs(off?i:i-1);
+      out+=`<rect x="${px(a)}" y="${T}" width="${px(Math.max(b-a,1.5))}" height="${phTop}" fill="var(--panel-2)" opacity=".85"/>`;
+      run=null;
+    }
+  });
+  // 가로 그리드 + 축 라벨
+  for(let k=0;k<=3;k++){
+    const v = lo + (hi-lo)*k/3, y=yP(v);
+    out+=`<line x1="${L}" y1="${px(y)}" x2="${L+pw}" y2="${px(y)}" stroke="var(--line)" stroke-width="1"/>`;
+    out+=`<text x="${L-8}" y="${px(y+3.5)}" text-anchor="end" font-family="var(--mono)" font-size="10" fill="var(--ink-3)">${Math.round(v).toLocaleString()}</text>`;
+  }
+  // 250일선 & 지수
+  out+=`<path d="${path(d=>d.sma,yP)}" fill="none" stroke="var(--accent)" stroke-width="1.6" stroke-dasharray="4 3"/>`;
+  out+=`<path d="${path(d=>d.ndx,yP)}" fill="none" stroke="var(--ink)" stroke-width="1.9" stroke-linejoin="round"/>`;
+  const lastX=xs(C.length-1), lastY=yP(C[C.length-1].ndx);
+  out+=`<circle cx="${px(lastX)}" cy="${px(lastY)}" r="3.5" fill="var(--ink)"/>`;
+  // VIX 패널
+  out+=`<line x1="${L}" y1="${px(yV(vLo))}" x2="${L+pw}" y2="${px(yV(vLo))}" stroke="var(--line)"/>`;
+  [DATA.params.vix_down_threshold, DATA.params.vix_up_threshold].forEach(t=>{
+    if(t<vLo||t>vHi) return;
+    out+=`<line x1="${L}" y1="${px(yV(t))}" x2="${L+pw}" y2="${px(yV(t))}" stroke="var(--crit)" stroke-width="1" stroke-dasharray="3 3" opacity=".55"/>`;
+    out+=`<text x="${L+pw+6}" y="${px(yV(t)+3.5)}" font-family="var(--mono)" font-size="10" fill="var(--ink-3)">${t}</text>`;
+  });
+  out+=`<path d="${path(d=>d.vix,yV)}" fill="none" stroke="var(--warn)" stroke-width="1.7"/>`;
+  out+=`<text x="${L-8}" y="${px(yV(vHi)+9)}" text-anchor="end" font-family="var(--mono)" font-size="10" fill="var(--ink-3)">VIX10</text>`;
+
+  // 낙폭 패널 (0% 기준선에서 아래로)
+  const dTop=T+phTop+gapY+phBot+gapY-6;
+  const dLo=Math.min(-14, Math.min(...C.map(d=>d.dd))-2);
+  const yD = v => dTop + (0-v)/(0-dLo)*phDD;
+  out+=`<path d="${C.map((d,i)=>`${i?'L':'M'}${px(xs(i))} ${px(yD(d.dd))}`).join(' ')} L ${px(xs(C.length-1))} ${px(dTop)} L ${px(xs(0))} ${px(dTop)} Z" fill="var(--crit-soft)"/>`;
+  out+=`<path d="${C.map((d,i)=>`${i?'L':'M'}${px(xs(i))} ${px(yD(d.dd))}`).join(' ')}" fill="none" stroke="var(--crit)" stroke-width="1.3" opacity=".8"/>`;
+  out+=`<line x1="${L}" y1="${px(dTop)}" x2="${L+pw}" y2="${px(dTop)}" stroke="var(--line-strong)"/>`;
+  const dthr=DATA.params.dd_threshold*100;
+  out+=`<line x1="${L}" y1="${px(yD(dthr))}" x2="${L+pw}" y2="${px(yD(dthr))}" stroke="var(--crit)" stroke-width="1" stroke-dasharray="3 3"/>`;
+  out+=`<text x="${L+pw+6}" y="${px(yD(dthr)+3.5)}" font-family="var(--mono)" font-size="10" fill="var(--ink-3)">${dthr}%</text>`;
+  out+=`<text x="${L+pw+6}" y="${px(dTop+3.5)}" font-family="var(--mono)" font-size="10" fill="var(--ink-3)">0%</text>`;
+  out+=`<text x="${L-8}" y="${px(dTop+11)}" text-anchor="end" font-family="var(--mono)" font-size="10" fill="var(--ink-3)">낙폭</text>`;
+
+  // x축 라벨
+  [0, Math.floor(C.length/3), Math.floor(C.length*2/3), C.length-1].forEach(i=>{
+    out+=`<text x="${px(xs(i))}" y="${H-6}" text-anchor="${i===0?'start':(i===C.length-1?'end':'middle')}"
+      font-family="var(--mono)" font-size="10" fill="var(--ink-3)">${C[i].d.slice(0,4)}.${C[i].d.slice(4,6)}</text>`;
+  });
+  svg.innerHTML=out;
+})();
+</script>
