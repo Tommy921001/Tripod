@@ -1,0 +1,141 @@
+name: 트라이팟 일일 신호
+
+on:
+  schedule:
+    # 하루 두 번 돈다.
+    # 23:10 UTC = 한국시간 아침 08:10 — 미국장 마감 직후. Nasdaq 공식 API 가 열리면 당일 종가를
+    #   바로 받는다. 아직 안 올라왔으면 아무것도 안 하고 정상 종료한다.
+    - cron: "10 23 * * 1-5"
+    # 05:30 UTC = 한국시간 오후 14:30 — FRED 갱신 이후. 여기서 확실히 채우고 교차검증까지 끝낸다.
+    #   규칙상 체결이 T+1(다음 미국장 마감)이므로 이 시점이면 주문 전에 충분히 여유가 있다.
+    - cron: "30 5 * * 2-6"
+  workflow_dispatch:        # 수동 실행. 리포지토리 '활동'으로 잡혀서 60일 자동중지도 막아준다.
+  push:
+    paths:
+      - "src/**"
+      - "config.json"
+      - ".github/workflows/daily.yml"
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: tripod-daily
+  cancel-in-progress: false
+
+jobs:
+  signal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # 의존성 없음 — 표준 라이브러리만 쓴다. pip install 단계가 아예 없다.
+
+      - name: 이전 상태 기억
+        id: before
+        run: |
+          if [ -f docs/state.json ]; then
+            echo "state=$(python3 -c "import json;print(json.load(open('docs/state.json'))['state'])")" >> "$GITHUB_OUTPUT"
+            echo "asof=$(python3 -c "import json;print(json.load(open('docs/state.json'))['asof'])")" >> "$GITHUB_OUTPUT"
+          else
+            echo "state=NONE" >> "$GITHUB_OUTPUT"
+            echo "asof=NONE" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: 시세 수집
+        run: python3 src/fetch.py
+
+      - name: 자가진단 (골든값 대조)
+        run: python3 src/selftest.py
+
+      - name: 사이트 생성
+        id: build
+        run: |
+          python3 src/build_site.py | tee /tmp/build.json
+          {
+            echo "asof=$(python3 -c "import json;print(json.load(open('docs/state.json'))['asof'])")"
+            echo "state=$(python3 -c "import json;print(json.load(open('docs/state.json'))['state'])")"
+            echo "label=$(python3 -c "import json;print(json.load(open('docs/state.json'))['state_label'])")"
+            echo "alloc=$(python3 -c "import json;print(json.load(open('docs/state.json'))['alloc_text'])")"
+            echo "gear=$(python3 -c "import json;print(json.load(open('docs/state.json'))['gear'])")"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: 요약 출력
+        run: |
+          python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          s = json.load(open("docs/state.json"))
+          p = s["params"]
+          print(f"## {s['asof']} · {s['state_label']}\n")
+          print(f"**{s['alloc_text']}**  ({s['gear']:.1f}배)\n")
+          print("| 다리 | 값 | 문턱 |")
+          print("|---|---|---|")
+          print(f"| 250일선 이격 | {s['gap_pct']:+.2f}% | +{p['band_up']*100:g}% / {p['band_down']*100:g}% |")
+          print(f"| VIX 10일 평균 | {s['vix_ma']:.2f} | {p['vix_up_threshold']:g} / {p['vix_down_threshold']:g} |")
+          print(f"| 52주 낙폭 | {s['dd_pct']:+.2f}% | {p['dd_threshold']*100:g}% |")
+          print()
+          if s["changed_today"]:
+              print(f"### ★ 신호 변경 — {s['prev_alloc_text']} → {s['alloc_text']}")
+              print("체결은 규칙상 **다음 거래일**입니다.")
+          else:
+              print(f"변경 없음 · {s['days_since_change']}일째 유지")
+          PY
+
+      - name: 커밋
+        id: commit
+        run: |
+          git config user.name  "tripod-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/market.csv docs/
+          if git diff --cached --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "변경사항 없음 (미국 휴장일이면 정상)"
+          else
+            git commit -m "${{ steps.build.outputs.asof }} · ${{ steps.build.outputs.label }} · ${{ steps.build.outputs.alloc }}"
+            git push
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: 신호 변경 시 이슈 생성 (= 메일 알림)
+        if: steps.before.outputs.state != 'NONE' && steps.before.outputs.state != steps.build.outputs.state
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const s = JSON.parse(fs.readFileSync('docs/state.json', 'utf8'));
+            const p = s.params;
+            const pages = `https://${context.repo.owner}.github.io/${context.repo.repo}/`;
+            const body = [
+              `## ${s.asof} · ${s.state_label}`,
+              ``,
+              `### ${s.prev_alloc_text}  →  **${s.alloc_text}**  (${s.gear.toFixed(1)}배)`,
+              ``,
+              `체결은 규칙상 **다음 거래일**입니다. 오늘 종가로 판정하고 내일 종가에 맞춥니다.`,
+              ``,
+              `| 다리 | 값 | 문턱 | 판정 |`,
+              `|---|---|---|---|`,
+              `| 250일선 이격 | ${s.gap_pct >= 0 ? '+' : ''}${s.gap_pct.toFixed(2)}% | +${p.band_up*100} / ${p.band_down*100}% | ${s.gap_pct > p.band_up*100 ? '상승' : (s.gap_pct < p.band_down*100 ? '하락' : '완충 — 직전 유지')} |`,
+              `| VIX 10일 평균 | ${s.vix_ma.toFixed(2)} | ${p.vix_up_threshold} / ${p.vix_down_threshold} | ${s.vix_ma >= p.vix_up_threshold ? '상승장 문턱 초과' : (s.vix_ma >= p.vix_down_threshold ? '하락장 문턱 초과' : '안정')} |`,
+              `| 52주 낙폭 | ${s.dd_pct.toFixed(2)}% | ${p.dd_threshold*100}% | ${s.dd_pct < p.dd_threshold*100 ? '문턱 초과' : '이내'} |`,
+              ``,
+              `나스닥100 ${s.ndx.toLocaleString()} · 250일선 ${s.sma.toLocaleString()} · 52주 고점 ${s.high52.toLocaleString()}`,
+              ``,
+              `대시보드: ${pages}`,
+              ``,
+              `---`,
+              `<sub>이 이슈는 신호가 바뀐 날에만 자동 생성됩니다. 확인 후 닫으세요.</sub>`,
+            ].join('\n');
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `★ ${s.asof} 신호 변경 — ${s.prev_alloc_text} → ${s.alloc_text}`,
+              body,
+              labels: ['signal-change'],
+            });
